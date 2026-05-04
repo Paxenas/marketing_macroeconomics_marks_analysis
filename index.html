@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TF Exam Analysis — Topic Priority Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161d;
+    --surface2: #1a1e28;
+    --border: #252a38;
+    --mkt-accent: #e8a045;
+    --mkt-dim: #7d5522;
+    --eco-accent: #5eb8a0;
+    --eco-dim: #2a5e50;
+    --danger: #e85757;
+    --warn: #e8c045;
+    --ok: #5eb87a;
+    --text: #e8eaf0;
+    --text-dim: #8891a8;
+    --text-muted: #4a5168;
+    --gold: #d4a847;
+    --silver: #9ba8c0;
+    --bronze: #c47a3a;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 40% at 20% 0%, rgba(232,160,69,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 100%, rgba(94,184,160,0.06) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 20px 80px; }
+
+  /* ─── HEADER ─── */
+  header {
+    padding: 60px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 900;
+    line-height: 1.1;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  h1 em {
+    font-style: italic;
+    background: linear-gradient(135deg, var(--mkt-accent), var(--eco-accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 15px;
+    max-width: 560px;
+  }
+
+  .meta-row {
+    display: flex;
+    gap: 24px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+
+  .meta-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .meta-pill .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ─── SECTION HEADERS ─── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .section-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+
+  .badge-mkt { background: rgba(232,160,69,0.15); color: var(--mkt-accent); }
+  .badge-eco { background: rgba(94,184,160,0.15); color: var(--eco-accent); }
+  .badge-insight { background: rgba(94,184,122,0.12); color: var(--ok); }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.25rem, 3vw, 1.7rem);
+    font-weight: 700;
+  }
+
+  .section-bar {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ─── SEGMENT BLOCK ─── */
+  .segment { margin-bottom: 56px; }
+
+  /* ─── TOPIC CARDS ─── */
+  .topic-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .topic-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    align-items: start;
+    gap: 14px;
+    transition: border-color 0.2s, transform 0.15s;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .topic-card:hover {
+    border-color: rgba(255,255,255,0.12);
+    transform: translateY(-1px);
+  }
+
+  .topic-card.rank-1 { border-left: 3px solid var(--gold); }
+  .topic-card.rank-2 { border-left: 3px solid var(--silver); }
+  .topic-card.rank-3 { border-left: 3px solid var(--bronze); }
+  .topic-card.rank-other { border-left: 3px solid var(--border); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .topic-card:nth-child(1) { animation-delay: 0.05s; }
+  .topic-card:nth-child(2) { animation-delay: 0.10s; }
+  .topic-card:nth-child(3) { animation-delay: 0.15s; }
+  .topic-card:nth-child(4) { animation-delay: 0.20s; }
+  .topic-card:nth-child(5) { animation-delay: 0.25s; }
+  .topic-card:nth-child(6) { animation-delay: 0.30s; }
+  .topic-card:nth-child(7) { animation-delay: 0.35s; }
+  .topic-card:nth-child(8) { animation-delay: 0.40s; }
+
+  .rank-num {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 900;
+    flex-shrink: 0;
+  }
+
+  .rank-1 .rank-num { background: rgba(212,168,71,0.15); color: var(--gold); }
+  .rank-2 .rank-num { background: rgba(155,168,192,0.12); color: var(--silver); }
+  .rank-3 .rank-num { background: rgba(196,122,58,0.15); color: var(--bronze); }
+  .rank-other .rank-num { background: var(--surface2); color: var(--text-muted); }
+
+  .topic-body { min-width: 0; }
+
+  .topic-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 5px;
+    line-height: 1.3;
+  }
+
+  .subtopics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .sub-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    background: var(--surface2);
+  }
+
+  .teacher-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  .teacher-note strong {
+    color: var(--text-dim);
+    font-style: normal;
+  }
+
+  /* ─── PRIORITY METER ─── */
+  .priority-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+    min-width: 90px;
+  }
+
+  .priority-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .priority-label.critical { color: var(--danger); }
+  .priority-label.high { color: var(--mkt-accent); }
+  .priority-label.medium { color: var(--warn); }
+  .priority-label.low { color: var(--text-muted); }
+
+  .pts-badge {
+    font-size: 11px;
+    color: var(--text-dim);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+    white-space: nowrap;
+  }
+
+  .freq-dots {
+    display: flex;
+    gap: 3px;
+  }
+
+  .freq-dot {
+    width: 8px; height: 8px;
+    border-radius: 2px;
+  }
+
+  .freq-dot.filled-mkt { background: var(--mkt-accent); }
+  .freq-dot.filled-eco { background: var(--eco-accent); }
+  .freq-dot.empty { background: var(--border); }
+
+  /* ─── INSIGHTS ─── */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 56px;
+  }
+
+  .insight-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .insight-card:nth-child(1) { animation-delay: 0.1s; }
+  .insight-card:nth-child(2) { animation-delay: 0.2s; }
+  .insight-card:nth-child(3) { animation-delay: 0.3s; }
+  .insight-card:nth-child(4) { animation-delay: 0.4s; }
+
+  .insight-icon {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+
+  .insight-title {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 8px;
+    letter-spacing: 0.02em;
+  }
+
+  .insight-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .insight-list li {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    padding-left: 14px;
+    position: relative;
+    line-height: 1.5;
+  }
+
+  .insight-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+
+  /* ─── MARKING PATTERNS ─── */
+  .patterns-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+    margin-bottom: 56px;
+  }
+
+  .pattern-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .pattern-type {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding: 3px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pattern-type.rewards { color: var(--ok); }
+  .pattern-type.penalizes { color: var(--danger); }
+  .pattern-type.structure { color: var(--eco-accent); }
+
+  .pattern-type::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .pattern-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .pattern-list li {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  /* ─── SCORE OVERVIEW ─── */
+  .score-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 56px;
+  }
+
+  .score-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .score-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .score-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ─── ANSWER STRUCTURE ─── */
+  .answer-tip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .answer-tip .tip-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--eco-accent);
+    margin-bottom: 5px;
+  }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border), transparent);
+    margin: 48px 0;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(13,15,20,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+    margin-bottom: 0;
+  }
+
+  .nav-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .nav-inner::-webkit-scrollbar { display: none; }
+
+  .nav-link {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+
+  .nav-link:hover { color: var(--text); background: var(--surface2); }
+  .nav-link.mkt:hover { color: var(--mkt-accent); }
+  .nav-link.eco:hover { color: var(--eco-accent); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 600px) {
+    .topic-card { grid-template-columns: 36px 1fr; }
+    .priority-col { display: none; }
+    .meta-row { gap: 10px; }
+    header { padding: 36px 0 28px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="#overview" class="nav-link">Overview</a>
+    <a href="#marketing" class="nav-link mkt">📊 Marketing</a>
+    <a href="#gesamtwirt" class="nav-link eco">📈 Gesamtwirtschaft</a>
+    <a href="#insights" class="nav-link">💡 Insights</a>
+    <a href="#marking" class="nav-link">✅ Marking Patterns</a>
+    <a href="#answer-tips" class="nav-link">📝 Answer Structure</a>
+  </div>
+</nav>
+
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <p class="eyebrow">TF 12 · English Section · Exam Analysis</p>
+    <h1>Topic Priority<br><em>Study Dashboard</em></h1>
+    <p class="subtitle">All four classroom exams analyzed — topics ranked by frequency, marks weight, and teacher correction emphasis.</p>
+    <div class="meta-row">
+      <div class="meta-pill"><span class="dot" style="background:var(--mkt-accent)"></span>KA 1 & KA 2 — Marketing</div>
+      <div class="meta-pill"><span class="dot" style="background:var(--eco-accent)"></span>KA 3 & KA 4 — Gesamtwirtschaft</div>
+      <div class="meta-pill"><span class="dot" style="background:var(--text-muted)"></span>228 total points analyzed</div>
+    </div>
+  </header>
+
+  <!-- SCORE OVERVIEW -->
+  <div id="overview">
+    <div class="section-header">
+      <span class="section-badge badge-insight">Overview</span>
+      <h2 class="section-title">Exam Snapshot</h2>
+      <div class="section-bar"></div>
+    </div>
+    <div class="score-overview">
+      <div class="score-card">
+        <div class="score-value" style="color:var(--mkt-accent)">78</div>
+        <div class="score-label">KA 1 Marketing<br>Total Points</div>
+      </div>
+      <div class="score-card">
+        <div class="score-value" style="color:var(--mkt-accent)">100</div>
+        <div class="score-label">KA 2 Marketing<br>Total Points</div>
+      </div>
+      <div class="score-card">
+        <div class="score-value" style="color:var(--eco-accent)">80</div>
+        <div class="score-label">KA 3 Economics<br>Total Points</div>
+      </div>
+      <div class="score-card">
+        <div class="score-value" style="color:var(--eco-accent)">50</div>
+        <div class="score-label">KA 4 Economics<br>Total Points</div>
+      </div>
+      <div class="score-card">
+        <div class="score-value" style="color:var(--text)">16</div>
+        <div class="score-label">Topics Covered<br>Across All Exams</div>
+      </div>
+      <div class="score-card">
+        <div class="score-value" style="color:var(--ok)">228</div>
+        <div class="score-label">Grand Total<br>Points Analyzed</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- MARKETING RANKINGS -->
+  <div class="segment" id="marketing">
+    <div class="section-header">
+      <span class="section-badge badge-mkt">Section 1</span>
+      <h2 class="section-title" style="color:var(--mkt-accent)">Marketing Topics — Ranked</h2>
+      <div class="section-bar"></div>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Ranked by combined score: frequency across both exams × marks allocated × teacher emphasis. Frequency dots = how often seen across 2 exams.</p>
+
+    <div class="topic-grid">
+
+      <!-- RANK 1 -->
+      <div class="topic-card rank-1">
+        <div class="rank-num">1</div>
+        <div class="topic-body">
+          <div class="topic-name">Pricing — All Methods &amp; Calculations</div>
+          <div class="subtopics">
+            <span class="sub-tag">Cost-based pricing</span>
+            <span class="sub-tag">Demand-based</span>
+            <span class="sub-tag">Competition-based</span>
+            <span class="sub-tag">Price differentiation</span>
+            <span class="sub-tag">Group pricing</span>
+            <span class="sub-tag">Product versioning</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> Calculation steps must be shown fully. Correct cost allocation per unit (fixed/variable split). Terminology is rewarded — use "selling price", "total cost", "profit margin" precisely. Demand/competition pricing needs a real-world application example.</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label critical">CRITICAL</span>
+          <span class="pts-badge">≈ 24 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot filled-mkt"></div>
+            <div class="freq-dot filled-mkt"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 2 -->
+      <div class="topic-card rank-2">
+        <div class="rank-num">2</div>
+        <div class="topic-body">
+          <div class="topic-name">Contribution Margin &amp; Break-Even Analysis</div>
+          <div class="subtopics">
+            <span class="sub-tag">CM I per unit &amp; total</span>
+            <span class="sub-tag">CM II (after fixed costs)</span>
+            <span class="sub-tag">Break-even quantity formula</span>
+            <span class="sub-tag">Break-even graph (3 curves)</span>
+            <span class="sub-tag">Fixed vs. variable cost classification</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> The graph must show three distinct curves: variable costs, total costs, and revenue. Break-even point must be highlighted explicitly. CM I = price − variable cost per unit; CM II = CM I (total) − fixed costs. Misclassifying fixed vs. variable costs (e.g. fuel) was penalized.</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label critical">CRITICAL</span>
+          <span class="pts-badge">≈ 22 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot filled-mkt"></div>
+            <div class="freq-dot filled-mkt"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 3 -->
+      <div class="topic-card rank-3">
+        <div class="rank-num">3</div>
+        <div class="topic-body">
+          <div class="topic-name">Price Elasticity</div>
+          <div class="subtopics">
+            <span class="sub-tag">Demand curve (graph)</span>
+            <span class="sub-tag">Elasticity formula &amp; calculation</span>
+            <span class="sub-tag">Elastic vs. inelastic interpretation</span>
+            <span class="sub-tag">Cross-price elasticity</span>
+            <span class="sub-tag">Income elasticity</span>
+            <span class="sub-tag">Turnover at given price</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> Formula must be shown explicitly before substituting values. Axes must be correctly labelled (price on x-axis, demand on y-axis in this context). PE &gt; 1 = elastic; analysis sentence is required. Cross-price and income elasticity needed a real-world sentence example.</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label critical">CRITICAL</span>
+          <span class="pts-badge">≈ 16 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot filled-mkt"></div>
+            <div class="freq-dot empty"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 4 -->
+      <div class="topic-card rank-other">
+        <div class="rank-num">4</div>
+        <div class="topic-body">
+          <div class="topic-name">BCG Matrix (Growth-Share Matrix)</div>
+          <div class="subtopics">
+            <span class="sub-tag">Draw &amp; label matrix</span>
+            <span class="sub-tag">Sort products (relative market share calc)</span>
+            <span class="sub-tag">Purpose of each quadrant</span>
+            <span class="sub-tag">Cash cows → fund stars/question marks</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> Relative market share = company turnover ÷ strongest competitor. Products must be placed correctly; students lost marks for wrong quadrant placement (B incorrectly placed in KA 1). Must explain the purpose of cash cows clearly: "generate cash to fund stars and question marks."</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label high">HIGH</span>
+          <span class="pts-badge">≈ 12 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot filled-mkt"></div>
+            <div class="freq-dot empty"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 5 -->
+      <div class="topic-card rank-other">
+        <div class="rank-num">5</div>
+        <div class="topic-body">
+          <div class="topic-name">SWOT &amp; PESTLE Analysis</div>
+          <div class="subtopics">
+            <span class="sub-tag">Identify S/W/O/T from a text</span>
+            <span class="sub-tag">Internal vs. external distinction</span>
+            <span class="sub-tag">Name all 6 PESTLE aspects</span>
+            <span class="sub-tag">Label paragraphs to correct PESTLE factor</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> SWOT must be taken directly from the given text — vague answers ("competition") were penalized as "too vague." PESTLE labelling was heavily weighted (6 pts). Internal = strengths &amp; weaknesses; External = opportunities &amp; threats.</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label high">HIGH</span>
+          <span class="pts-badge">≈ 19 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot filled-mkt"></div>
+            <div class="freq-dot empty"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 6 -->
+      <div class="topic-card rank-other">
+        <div class="rank-num">6</div>
+        <div class="topic-body">
+          <div class="topic-name">Ansoff Matrix &amp; Porter's Generic Strategies</div>
+          <div class="subtopics">
+            <span class="sub-tag">Label 4 Ansoff quadrants</span>
+            <span class="sub-tag">Classify real-world examples (1–4)</span>
+            <span class="sub-tag">Label Porter's 4 strategies</span>
+            <span class="sub-tag">Apply Porter to a company scenario</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> All 4 Ansoff and all 4 Porter strategies must be spelled correctly and placed correctly. Classification of examples (e.g. BurgerKing = 4=Diversification) carries 6 pts. Porter application: "Face Protector" sells globally → Cost Leadership (broad + cost).</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label high">HIGH</span>
+          <span class="pts-badge">≈ 16 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot empty"></div>
+            <div class="freq-dot filled-mkt"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 7 -->
+      <div class="topic-card rank-other">
+        <div class="rank-num">7</div>
+        <div class="topic-body">
+          <div class="topic-name">Market Research, Segmentation &amp; ATL/BTL</div>
+          <div class="subtopics">
+            <span class="sub-tag">Primary vs. secondary research (explain + adv/dis)</span>
+            <span class="sub-tag">4 segmentation criteria with explanations</span>
+            <span class="sub-tag">ATL = mass/Above the Line</span>
+            <span class="sub-tag">BTL = targeted/Below the Line</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> Each segmentation criterion needs a clear explanation, not just a name. ATL/BTL: examples required (TV ad, influencer marketing). Research advantages/disadvantages must be distinct — "fast &amp; cheap" for secondary; "precise &amp; fresh" for primary.</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label high">HIGH</span>
+          <span class="pts-badge">≈ 21 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot empty"></div>
+            <div class="freq-dot filled-mkt"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 8 -->
+      <div class="topic-card rank-other">
+        <div class="rank-num">8</div>
+        <div class="topic-body">
+          <div class="topic-name">4Ps, PLC, Diversification &amp; Brand Marketing</div>
+          <div class="subtopics">
+            <span class="sub-tag">4Ps: name + explain each</span>
+            <span class="sub-tag">Marketing definition</span>
+            <span class="sub-tag">PLC: draw 5 phases (incl. Development)</span>
+            <span class="sub-tag">Product diversification types</span>
+            <span class="sub-tag">Multi-branding pros/cons</span>
+            <span class="sub-tag">Brand advocates</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> PLC must show the Development phase below the x-axis (before launch). Diversification matching requires all 6 terms correctly defined. Brand advocate definition must go beyond "word of mouth" → mention "opinion leaders."</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label medium">MEDIUM</span>
+          <span class="pts-badge">≈ 30 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot filled-mkt"></div>
+            <div class="freq-dot empty"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- GESAMTWIRTSCHAFT RANKINGS -->
+  <div class="segment" id="gesamtwirt">
+    <div class="section-header">
+      <span class="section-badge badge-eco">Section 2</span>
+      <h2 class="section-title" style="color:var(--eco-accent)">Gesamtwirtschaft — Ranked</h2>
+      <div class="section-bar"></div>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Ranked across KA 3 (80 pts) and KA 4 (50 pts). Topics appearing in both exams receive highest priority.</p>
+
+    <div class="topic-grid">
+
+      <!-- RANK 1 -->
+      <div class="topic-card rank-1">
+        <div class="rank-num">1</div>
+        <div class="topic-body">
+          <div class="topic-name">Employment — Types, Causes &amp; Policy Responses</div>
+          <div class="subtopics">
+            <span class="sub-tag">Frictional unemployment</span>
+            <span class="sub-tag">Cyclical unemployment</span>
+            <span class="sub-tag">Structural unemployment</span>
+            <span class="sub-tag">Labour market imperfections</span>
+            <span class="sub-tag">Government measures</span>
+            <span class="sub-tag">Negative impacts on individuals/companies/governments</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> All 3 types must be defined accurately with examples. Government measures must match the specific imperfection listed. Negative impacts require separate answers per stakeholder (individual, company, government) — vague combined answers lost marks.</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label critical">CRITICAL</span>
+          <span class="pts-badge">≈ 20 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot filled-eco"></div>
+            <div class="freq-dot empty"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 2 -->
+      <div class="topic-card rank-2">
+        <div class="rank-num">2</div>
+        <div class="topic-body">
+          <div class="topic-name">Fiscal Policy — Demand-Sided Anti-Cyclical</div>
+          <div class="subtopics">
+            <span class="sub-tag">Recession measures (tax cuts + govt spending)</span>
+            <span class="sub-tag">Multiplier/chain effect explanation</span>
+            <span class="sub-tag">Why cheques might not work (savings paradox)</span>
+            <span class="sub-tag">Raising taxes in recession — counter-argument</span>
+            <span class="sub-tag">Recession spiral: demand → production → employment</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> "Suggest" = always explain WHY and HOW the measure works, not just name it. The chain (lower tax → more disposable income → higher demand → more production → more employment) must be stated in full. Cheque scenario: key is people may save instead of spend.</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label critical">CRITICAL</span>
+          <span class="pts-badge">≈ 15 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot empty"></div>
+            <div class="freq-dot filled-eco"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 3 -->
+      <div class="topic-card rank-3">
+        <div class="rank-num">3</div>
+        <div class="topic-body">
+          <div class="topic-name">Price Stability — CPI, Inflation &amp; Deflation</div>
+          <div class="subtopics">
+            <span class="sub-tag">CPI measurement (basket of goods)</span>
+            <span class="sub-tag">HCPI vs. CPI difference</span>
+            <span class="sub-tag">Impact of inflation on purchasing power</span>
+            <span class="sub-tag">Demand-pull vs. cost-push inflation</span>
+            <span class="sub-tag">12 True/False statements on inflation/deflation</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> The T/F section (12 BE) was the single largest task block in KA 3. Teacher tested nuanced distinctions: "The aim is near-zero inflation (around 2%), NOT zero." Deflation long-run = demand falls (people wait for lower prices). Key word: "usually" in T/F statements changes the answer.</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label critical">CRITICAL</span>
+          <span class="pts-badge">≈ 20 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot filled-eco"></div>
+            <div class="freq-dot empty"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 4 -->
+      <div class="topic-card rank-other">
+        <div class="rank-num">4</div>
+        <div class="topic-body">
+          <div class="topic-name">Appropriate Growth — GDP, HDI &amp; True/False</div>
+          <div class="subtopics">
+            <span class="sub-tag">Nominal vs. Real GDP (contrast)</span>
+            <span class="sub-tag">Real GDP calculation (deflator method)</span>
+            <span class="sub-tag">HDI: 3 pillars (health, education, income)</span>
+            <span class="sub-tag">GDP limitations (unpaid work, wellbeing)</span>
+            <span class="sub-tag">True/False statements on GDP</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> Real GDP = Nominal GDP ÷ Deflator. Deflator = 1 + inflation rate. HDI must name all 3 pillars with their measurement tool. T/F: "Nominal GDP does NOT measure wellbeing — neither does Real GDP" (both false for wellbeing). Target growth = 1.3% trend, not 4%+.</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label high">HIGH</span>
+          <span class="pts-badge">≈ 20 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot filled-eco"></div>
+            <div class="freq-dot empty"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 5 -->
+      <div class="topic-card rank-other">
+        <div class="rank-num">5</div>
+        <div class="topic-body">
+          <div class="topic-name">Economic/Business Cycle</div>
+          <div class="subtopics">
+            <span class="sub-tag">Draw &amp; label 4 phases (expansion, peak, recession/contraction, trough)</span>
+            <span class="sub-tag">Trend line</span>
+            <span class="sub-tag">Leading / Coincident / Lagging indicators (2 each)</span>
+            <span class="sub-tag">Growth vs. shrink headlines</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> Graph must label all 4 phases AND the trend line. Leading indicators = signal future (incoming orders, construction permits). Coincident = happen simultaneously (unemployment numbers, import spending). Lagging = confirm after the fact (GDP, investments). Headlines: longer delivery times = growth (high demand).</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label high">HIGH</span>
+          <span class="pts-badge">≈ 15 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot empty"></div>
+            <div class="freq-dot filled-eco"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 6 -->
+      <div class="topic-card rank-other">
+        <div class="rank-num">6</div>
+        <div class="topic-body">
+          <div class="topic-name">Supply-Sided Fiscal Policy</div>
+          <div class="subtopics">
+            <span class="sub-tag">Marginal income tax reduction → productivity chain</span>
+            <span class="sub-tag">Free trade benefits (social mobility, innovation)</span>
+            <span class="sub-tag">Laissez-faire vs. Intervention (T/F)</span>
+            <span class="sub-tag">Supply-sided measures before recession</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> Must distinguish demand-sided vs. supply-sided — long-term production focus. Free trade: "naturally produces unequal results BUT creates social mobility and incentive to innovate." Laissez-faire = government should NOT intervene (free market maximizes welfare). Intervention = opposite.</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label high">HIGH</span>
+          <span class="pts-badge">≈ 10 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot empty"></div>
+            <div class="freq-dot filled-eco"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 7 -->
+      <div class="topic-card rank-other">
+        <div class="rank-num">7</div>
+        <div class="topic-body">
+          <div class="topic-name">Uneasy Quadrangle &amp; External Equilibrium</div>
+          <div class="subtopics">
+            <span class="sub-tag">4 elements of Uneasy Quadrangle</span>
+            <span class="sub-tag">3 types of aim relationships (harmony/conflict/neutrality)</span>
+            <span class="sub-tag">Trade surplus/deficit, depreciation/appreciation effects</span>
+            <span class="sub-tag">Net exports calculation</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> Elements: price stability, full employment, appropriate GDP growth, external equilibrium. Relationship examples must be specific (not vague). Depreciation = currency loses value → exports become cheaper for foreigners → exports increase. Trade surplus: not always desirable (foreign dependency risk).</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label medium">MEDIUM</span>
+          <span class="pts-badge">≈ 20 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot filled-eco"></div>
+            <div class="freq-dot empty"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK 8 -->
+      <div class="topic-card rank-other">
+        <div class="rank-num">8</div>
+        <div class="topic-body">
+          <div class="topic-name">Fair Distribution of Income (Lorenz Curve)</div>
+          <div class="subtopics">
+            <span class="sub-tag">Label Lorenz curve chart axes</span>
+            <span class="sub-tag">Explain purpose of Lorenz curve</span>
+            <span class="sub-tag">Measures to flatten it (progressive tax, wealth redistribution)</span>
+            <span class="sub-tag">"Some people deserve to be poor" — argue/refute</span>
+          </div>
+          <div class="teacher-note"><strong>Teacher focus:</strong> Axes not labelled = 0 pts for that part. Lorenz curve = x% of people own y% of income/wealth. Flattening measures must be substantive: progressive taxation + wealth/land confiscation. Opinion question: teacher rewards structured argumentation with a clear example.</div>
+        </div>
+        <div class="priority-col">
+          <span class="priority-label medium">MEDIUM</span>
+          <span class="pts-badge">≈ 10 pts</span>
+          <div class="freq-dots">
+            <div class="freq-dot empty"></div>
+            <div class="freq-dot filled-eco"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- INSIGHTS -->
+  <div id="insights">
+    <div class="section-header">
+      <span class="section-badge badge-insight">Patterns</span>
+      <h2 class="section-title">Key Insights from All 4 Exams</h2>
+      <div class="section-bar"></div>
+    </div>
+    <div class="insights-grid">
+      <div class="insight-card">
+        <div class="insight-icon">🔢</div>
+        <div class="insight-title">Calculation Tasks Are the Biggest Mark Sources</div>
+        <ul class="insight-list">
+          <li>Pricing (cost-based), contribution margin, break-even, price elasticity, and real GDP calculations appear in every exam section</li>
+          <li>Showing formula first, then substituting, then final answer = full marks</li>
+          <li>Skipping the formula step typically costs 1 pt per calculation</li>
+          <li>Rounding must be reasonable (≈ symbol used correctly)</li>
+        </ul>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">📊</div>
+        <div class="insight-title">Graphs Are High-Value but Highly Penalized</div>
+        <ul class="insight-list">
+          <li>All graphs require: labelled axes, correct curve shapes, and correct phase/quadrant labels</li>
+          <li>PLC: missing "Development" phase (below x-axis) = lost pts</li>
+          <li>BCG: wrong product placement = automatic wrong answer</li>
+          <li>Break-even graph: must show 3 lines; break-even point must be circled/highlighted</li>
+          <li>Demand curve: axes must be inverted (price on x, demand on y)</li>
+        </ul>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">💬</div>
+        <div class="insight-title">Application Examples Are Always Required</div>
+        <ul class="insight-list">
+          <li>Every "explain" question expects a real-world example</li>
+          <li>Distribution strategies, pricing methods, fiscal policy all need examples</li>
+          <li>Vague answers like "competition" without context = partial marks only</li>
+          <li>Best examples: BYD (marketing), Red Bull (SWOT/PESTLE), PenPals (CM/BEP), Cinnamon Friends (pricing)</li>
+        </ul>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">📋</div>
+        <div class="insight-title">True/False Sections Are Tricky — Know the Nuance</div>
+        <ul class="insight-list">
+          <li>KA 3 had 16 T/F questions worth 16 BE — largest single task block</li>
+          <li>Key traps: "as little inflation as possible" = FALSE (target is ~2%, not zero)</li>
+          <li>"Usually" keyword in statements often changes T/F (short-run vs. long-run effects)</li>
+          <li>Deflation: short-run may increase demand, long-run causes decline</li>
+          <li>Laissez-faire = no intervention; Intervention = intervene. Both are opposite of each other</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- MARKING PATTERNS -->
+  <div id="marking">
+    <div class="section-header">
+      <span class="section-badge badge-insight">Teacher Analysis</span>
+      <h2 class="section-title">Marking Behaviour — What the Teacher Rewards &amp; Penalizes</h2>
+      <div class="section-bar"></div>
+    </div>
+    <div class="patterns-grid">
+      <div class="pattern-card">
+        <div class="pattern-type rewards">Rewards (✓ marks in red)</div>
+        <ul class="pattern-list">
+          <li>Subject-specific terminology used correctly</li>
+          <li>Chain-of-logic explanations (cause → effect → consequence)</li>
+          <li>Full formula shown before substitution in calculations</li>
+          <li>Two distinct advantages AND disadvantages (not just one of each)</li>
+          <li>Explicitly linking theory to the given scenario/company</li>
+          <li>Noting abbreviations (CM1, CM2, PE) and defining them</li>
+          <li>"Well done" written for complete, clearly structured answers</li>
+        </ul>
+      </div>
+      <div class="pattern-card">
+        <div class="pattern-type penalizes">Penalizes (✗ or half marks)</div>
+        <ul class="pattern-list">
+          <li>Vague answers without specifics ("it creates problems")</li>
+          <li>Missing axes labels on any graph</li>
+          <li>Incorrect classification in matrix tasks (BCG, Ansoff, Porter)</li>
+          <li>Confusing demand-pull and cost-push inflation</li>
+          <li>Misclassifying fixed vs. variable costs</li>
+          <li>Only naming a measure without explaining how it works</li>
+          <li>"Too vague" annotation for single-word threat/strength entries in SWOT</li>
+        </ul>
+      </div>
+      <div class="pattern-card">
+        <div class="pattern-type structure">Expected Answer Structure</div>
+        <ul class="pattern-list">
+          <li>"Suggest" tasks: Name measure → Explain mechanism → Link to outcome</li>
+          <li>"Explain" tasks: Define term → Give example → State effect</li>
+          <li>"Calculate" tasks: Write formula → Substitute values → Calculate → State result in words</li>
+          <li>"Compare/Contrast": Two clear blocks, symmetric structure</li>
+          <li>"Analyse": Quantitative result + qualitative interpretation sentence</li>
+          <li>T/F: Just the letter. No explanation needed unless asked.</li>
+        </ul>
+      </div>
+      <div class="pattern-card">
+        <div class="pattern-type rewards">High-Scoring Answer Differentiators</div>
+        <ul class="pattern-list">
+          <li>Using the exact company from the scenario in examples (not generic firms)</li>
+          <li>Explaining WHY, not just WHAT — showing understanding of causality</li>
+          <li>Including the short-run vs. long-run distinction for economics topics</li>
+          <li>Connecting topics: e.g. price elasticity → demand curve → turnover calculation</li>
+          <li>Noting edge cases: e.g. "fuel cost questionable as fixed/variable"</li>
+          <li>Awareness of economic tradeoffs: surplus good but over-reliance risk</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ANSWER TIPS -->
+  <div id="answer-tips">
+    <div class="section-header">
+      <span class="section-badge badge-eco">Study Guide</span>
+      <h2 class="section-title">Answer Structure Templates</h2>
+      <div class="section-bar"></div>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">These exact patterns emerged from analyzing teacher corrections across all four exams. Memorize these structures.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;">
+
+      <div>
+        <div class="answer-tip">
+          <div class="tip-label">📌 For "Suggest a measure" (Policy/Marketing)</div>
+          <strong>[Name the measure]</strong> → "The government could lower income taxes."<br>
+          <strong>[Mechanism]</strong> → "This gives people more disposable income to spend."<br>
+          <strong>[Outcome chain]</strong> → "Higher demand → more production → more employment → GDP growth."
+        </div>
+        <div class="answer-tip" style="margin-top:10px;">
+          <div class="tip-label">📌 For Break-Even Calculation</div>
+          Q = Fixed Costs ÷ (Selling Price − Variable Cost per unit)<br>
+          → Show formula → substitute → calculate → write: "At approx. X units, total costs are covered."
+        </div>
+        <div class="answer-tip" style="margin-top:10px;">
+          <div class="tip-label">📌 For Price Elasticity</div>
+          PE = (ΔQ/Q₁ × 100) ÷ (ΔP/P₁ × 100)<br>
+          → Always show formula first → substitute → result → "Since |PE| &gt; 1, demand is <strong>elastic</strong> and sensitive to price changes."
+        </div>
+      </div>
+
+      <div>
+        <div class="answer-tip">
+          <div class="tip-label">📌 For Nominal vs. Real GDP</div>
+          <strong>Nominal GDP:</strong> Total value of all goods/services at current prices. Does not account for inflation.<br>
+          <strong>Real GDP:</strong> Adjusts for inflation using a base year. Better measure of actual productivity growth.<br>
+          <strong>Formula:</strong> Real GDP = Nominal GDP ÷ (1 + inflation rate)
+        </div>
+        <div class="answer-tip" style="margin-top:10px;">
+          <div class="tip-label">📌 For SWOT from a Text</div>
+          Strength = internal positive (mentioned as current asset in text)<br>
+          Weakness = internal negative (current limitation)<br>
+          Opportunity = external positive (future possibility in text)<br>
+          Threat = external negative (external risk mentioned)<br>
+          → Never write just one word — always 1 sentence minimum.
+        </div>
+        <div class="answer-tip" style="margin-top:10px;">
+          <div class="tip-label">📌 For Recession Spiral (Question 5 type)</div>
+          Demand ↓ (less income / higher costs) → Production ↓ (firms sell less, profits fall) → Employment ↓ (firms cut labour costs, lay-offs) → Income ↓ (loop accelerates downward)
+        </div>
+      </div>
+
+    </div>
+
+    <!-- QUICK REFERENCE -->
+    <div style="margin-top:36px;">
+      <div class="section-header">
+        <span class="section-badge badge-mkt">Quick Reference</span>
+        <h2 class="section-title" style="font-size:1.1rem;">Must-Know Formulas &amp; Definitions</h2>
+        <div class="section-bar"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:4px;">
+        <div class="answer-tip"><div class="tip-label">Cost-Based Price</div>Total Cost per unit × (1 + profit margin %)</div>
+        <div class="answer-tip"><div class="tip-label">Relative Market Share</div>Company Turnover ÷ Strongest Competitor Turnover</div>
+        <div class="answer-tip"><div class="tip-label">CM I (per unit)</div>Selling Price − Variable Cost per unit</div>
+        <div class="answer-tip"><div class="tip-label">CM I (total)</div>CM I per unit × Quantity</div>
+        <div class="answer-tip"><div class="tip-label">CM II</div>CM I (total) − Related Fixed Costs</div>
+        <div class="answer-tip"><div class="tip-label">Break-Even Quantity</div>Fixed Costs ÷ CM I per unit</div>
+        <div class="answer-tip"><div class="tip-label">Real GDP</div>Nominal GDP ÷ (1 + inflation rate)</div>
+        <div class="answer-tip"><div class="tip-label">Turnover</div>Price × Demand (in pcs)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="divider"></div>
+  <p style="text-align:center;font-size:12px;color:var(--text-muted);">Based on KA 1 &amp; 2 (Marketing) and KA 3 &amp; 4 (Gesamtwirtschaftliche Rahmenbedingungen) · Student: Fatima Vera Öksüz · TF 12.1 / 12.5.2</p>
+
+</div>
+</body>
+</html>
